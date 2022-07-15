@@ -1,3 +1,10 @@
+#!/usr/bin/env python3
+
+# robot의 현재 pose : Odometry
+# 이 정보를 tf_listener로 map to odom 하고
+# marker pose를 sub해서 goal target
+#
+
 """
 
 Move to specified pose
@@ -13,9 +20,34 @@ P. I. Corke, "Robotics, Vision & Control", Springer 2017, ISBN 978-3-319-54413-7
 import matplotlib.pyplot as plt
 import numpy as np
 import rospy
+
 from cm_aruco_msgs.msg import Aruco_marker
+from nav_msgs.msg import Odometry
+import tf
+"""
+    br = tf.TransformBroadcaster()
+    br.sendTransform((msg.x, msg.y, 0),
+                tf.transformations.quaternion_from_euler(0, 0, msg.theta),
+                     rospy.Time.now(),
+                     turtlename,
+                     "world")
+
+"""
+
+
+
 from random import random
 
+class aaaa:
+    def __init__(self):
+
+        self.robot_pose_sub = rospy.Subscriber("odom",Odometry, odom_callback)
+        self.marker_pose_sub = rospy.Subscriber("marker_pose", Aruco_marker, marker_callback) #marker pose
+    
+    def odom_callback(self, data):
+        
+
+    def marker_callback(self, data):
 
 class PathFinderController:
     """
@@ -173,6 +205,7 @@ def transformation_matrix(x, y, theta):
 
 
 def main():
+    rospy.init_node('move_to_pose', annonymous = false)
 
     for i in range(5):
         x_start = 20 * random()

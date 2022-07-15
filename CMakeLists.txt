@@ -11,7 +11,10 @@ find_package(catkin REQUIRED COMPONENTS
   aruco
   rospy
   std_msgs
+  nav_msgs
   tf
+  tf_conversions
+  message_generation
 )
 
 ## System dependencies are found with CMake's conventions
@@ -69,10 +72,12 @@ find_package(catkin REQUIRED COMPONENTS
 # )
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   std_msgs
-# )
+generate_messages(
+  DEPENDENCIES
+  std_msgs
+  nav_msgs
+  geometry_msgs
+)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -104,10 +109,10 @@ find_package(catkin REQUIRED COMPONENTS
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
-#  LIBRARIES move_to_mk
-#  CATKIN_DEPENDS aruco rospy std_msgs tf
-#  DEPENDS system_lib
+  INCLUDE_DIRS include
+  LIBRARIES ${PROJECT_NAME}
+  CATKIN_DEPENDS aruco rospy std_msgs tf nav_msgs message_runtime
+  DEPENDS system_lib
 )
 
 ###########
