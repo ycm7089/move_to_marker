@@ -1,24 +1,9 @@
 #!/usr/bin/env python3
 
-# robot의 현재 pose : Odometry
-# 이 정보를 tf_listener로 map to odom 하고
-# marker pose를 sub해서 goal target
-#
-
-"""
-
-Move to specified pose
-
-Author: Daniel Ingram (daniel-s-ingram)
-        Atsushi Sakai (@Atsushi_twi)
-        Seied Muhammad Yazdian (@Muhammad-Yazdian)
-
-P. I. Corke, "Robotics, Vision & Control", Springer 2017, ISBN 978-3-319-54413-7
-
-"""
 
 import matplotlib.pyplot as plt
 import numpy as np
+import actionlib
 import rospy
 import math
 from actionlib_msgs.msg import *
@@ -27,55 +12,56 @@ from geometry_msgs.msg import Pose
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from nav_msgs.msg import Odometry
 import tf
-"""
-    br = tf.TransformBroadcaster()
-    br.sendTransform((msg.x, msg.y, 0),
-                tf.transformations.quaternion_from_euler(0, 0, msg.theta),
-                     rospy.Time.now(),
-                     turtlename,
-                     "world")
-
-"""
-
-
 
 from random import random
 
-current_robot_pose = Odometry()
-current_marker_pose = Pose()
+# current_robot_pose = Odometry()
+# current_marker_pose = Pose()
 
 class topic_sub:
     def __init__(self):
         self.robot_pose_sub = rospy.Subscriber("/odom",Odometry, self.odom_callback)
-        self.marker_pose_sub = rospy.Subscriber("/marker_pose", Aruco_marker, self.marker_callback) #marker pose
+        self.marker_pose_sub = rospy.Subscriber("/aruco_poses", Aruco_marker, self.marker_callback) #marker pose
         
-    def odom_callback(msg):
-        current_robot_pose = msg
-
-    def marker_callback(msg):
-        current_marker_pose = msg
-
-    def tf_litener(current_robot_pose, current_marker_pose):
-        safe_link_listener = tf.TransformListener()
-        safe_link_listener.lookupTransform("/base_link", "/safe_link", rospy.Time(0))
-
-
-    def move_toward_marker(goal_point):
-        goal = MoveBaseGoal()
-        goal.target_pose.header.frame_id = "map"
-        goal.target_pose.header.stamp = rospy.Time.now()
+       
         
-        goal.target_pose.pose.orientation.x = 0
-        goal.target_pose.pose.orientation.y = 0
-        goal.target_pose.pose.orientation.z = goal_point.z
-        goal.target_pose.pose.orientation.w = goal_point.w
+    def odom_callback(self,msg):
+        self.current_robot_pose = msg
+
+    def marker_callback(self,msg):
+        self.current_marker_pose = msg
+
+def tf_listener():
+    listener = tf.TransformListener()
+
+    while not rospy.is_shutdown():
+        listener.waitForTransform('/base_link','/safe_link',rospy.Time(0), rospy.Duration(4.0))
+        (trans, rot) = listener.lookupTransform("/base_link", "/safe_link", rospy.Time(0))
         
-        goal.target_pose.pose.position.x = goal_point.x
-        goal.target_pose.pose.position.y = goal_point.y
-        goal.target_pose.pose.position.z = 0
-        
-        print goal
-        ac.send_goal(goal) 
+        #trans[0] is x
+        # print(trans[0])
+        move_toward_marker(trans,rot)
+
+        # quaternion check and Euler check
+
+def move_toward_marker(trans, rot):
+    goal = MoveBaseGoal()
+    ac = actionlib.SimpleActionClient("move_base", MoveBaseAction)
+
+    goal.target_pose.header.frame_id = "map"
+    goal.target_pose.header.stamp = rospy.Time.now()
+    
+    goal.target_pose.pose.orientation.x = 0
+    goal.target_pose.pose.orientation.y = 0
+    goal.target_pose.pose.orientation.z = rot[2]
+    goal.target_pose.pose.orientation.w = rot[3]
+    
+    goal.target_pose.pose.position.x = trans[0]
+    goal.target_pose.pose.position.y = trans[1]
+    goal.target_pose.pose.position.z = 0
+    # print(trans[0])
+    
+    ac.send_goal(goal) 
 
 class PathFinderController:
     """
@@ -233,21 +219,22 @@ def transformation_matrix(x, y, theta):
 
 
 def main():
-    rospy.init_node('move_to_pose', annonymous = false)
-    ac = actionlib.SimpleActionClient("move_base", MoveBaseAction)
-
-    for i in range(5):
-        x_start = 20 * random()
-        y_start = 20 * random()
-        theta_start = 2 * np.pi * random() - np.pi
-        x_goal = 20 * random()
-        y_goal = 20 * random()
-        theta_goal = 2 * np.pi * random() - np.pi
-        print("Initial x: %.2f m\nInitial y: %.2f m\nInitial theta: %.2f rad\n" %
-              (x_start, y_start, theta_start))
-        print("Goal x: %.2f m\nGoal y: %.2f m\nGoal theta: %.2f rad\n" %
-              (x_goal, y_goal, theta_goal))
-        move_to_pose(x_start, y_start, theta_start, x_goal, y_goal, theta_goal)
+    rospy.init_node('move_to_pose')
+    # while not rospy.is_shutdown():
+    s = topic_sub()
+    tf_listener()
+    # for i in range(5):
+    #     x_start = 20 * random()
+    #     y_start = 20 * random()
+    #     theta_start = 2 * np.pi * random() - np.pi
+    #     x_goal = 20 * random()
+    #     y_goal = 20 * random()
+    #     theta_goal = 2 * np.pi * random() - np.pi
+    #     print("Initial x: %.2f m\nInitial y: %.2f m\nInitial theta: %.2f rad\n" %
+    #           (x_start, y_start, theta_start))
+    #     print("Goal x: %.2f m\nGoal y: %.2f m\nGoal theta: %.2f rad\n" %
+    #           (x_goal, y_goal, theta_goal))
+    #     move_to_pose(x_start, y_start, theta_start, x_goal, y_goal, theta_goal)
 
 
 if __name__ == '__main__':
