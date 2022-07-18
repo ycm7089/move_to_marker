@@ -33,7 +33,7 @@
   <exec_depend>std_msgs</exec_depend>
   <exec_depend>tf</exec_depend>
   <exec_depend>tf_conversions</exec_depend>
-  <exec_depend>message_generation</exec_depend>
+  <exec_depend>message_runtime</exec_depend>
 
   <export>
   </export>

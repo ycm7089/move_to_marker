@@ -20,8 +20,11 @@ P. I. Corke, "Robotics, Vision & Control", Springer 2017, ISBN 978-3-319-54413-7
 import matplotlib.pyplot as plt
 import numpy as np
 import rospy
-
+import math
+from actionlib_msgs.msg import *
 from cm_aruco_msgs.msg import Aruco_marker
+from geometry_msgs.msg import Pose
+from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from nav_msgs.msg import Odometry
 import tf
 """
@@ -38,16 +41,41 @@ import tf
 
 from random import random
 
-class aaaa:
+current_robot_pose = Odometry()
+current_marker_pose = Pose()
+
+class topic_sub:
     def __init__(self):
-
-        self.robot_pose_sub = rospy.Subscriber("odom",Odometry, odom_callback)
-        self.marker_pose_sub = rospy.Subscriber("marker_pose", Aruco_marker, marker_callback) #marker pose
-    
-    def odom_callback(self, data):
+        self.robot_pose_sub = rospy.Subscriber("/odom",Odometry, self.odom_callback)
+        self.marker_pose_sub = rospy.Subscriber("/marker_pose", Aruco_marker, self.marker_callback) #marker pose
         
+    def odom_callback(msg):
+        current_robot_pose = msg
 
-    def marker_callback(self, data):
+    def marker_callback(msg):
+        current_marker_pose = msg
+
+    def tf_litener(current_robot_pose, current_marker_pose):
+        safe_link_listener = tf.TransformListener()
+        safe_link_listener.lookupTransform("/base_link", "/safe_link", rospy.Time(0))
+
+
+    def move_toward_marker(goal_point):
+        goal = MoveBaseGoal()
+        goal.target_pose.header.frame_id = "map"
+        goal.target_pose.header.stamp = rospy.Time.now()
+        
+        goal.target_pose.pose.orientation.x = 0
+        goal.target_pose.pose.orientation.y = 0
+        goal.target_pose.pose.orientation.z = goal_point.z
+        goal.target_pose.pose.orientation.w = goal_point.w
+        
+        goal.target_pose.pose.position.x = goal_point.x
+        goal.target_pose.pose.position.y = goal_point.y
+        goal.target_pose.pose.position.z = 0
+        
+        print goal
+        ac.send_goal(goal) 
 
 class PathFinderController:
     """
@@ -206,6 +234,7 @@ def transformation_matrix(x, y, theta):
 
 def main():
     rospy.init_node('move_to_pose', annonymous = false)
+    ac = actionlib.SimpleActionClient("move_base", MoveBaseAction)
 
     for i in range(5):
         x_start = 20 * random()
