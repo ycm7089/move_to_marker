@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-
 import matplotlib.pyplot as plt
 import numpy as np
 import actionlib
@@ -23,12 +22,10 @@ class topic_sub:
         self.robot_pose_sub = rospy.Subscriber("/odom",Odometry, self.odom_callback)
         self.marker_pose_sub = rospy.Subscriber("/aruco_poses", Aruco_marker, self.marker_callback) #marker pose
         
-       
-        
-    def odom_callback(self,msg):
+    def odom_callback(self, msg):
         self.current_robot_pose = msg
 
-    def marker_callback(self,msg):
+    def marker_callback(self, msg):
         self.current_marker_pose = msg
 
 def tf_listener():
@@ -37,15 +34,40 @@ def tf_listener():
     while not rospy.is_shutdown():
         listener.waitForTransform('/base_link','/safe_link',rospy.Time(0), rospy.Duration(4.0))
         (trans, rot) = listener.lookupTransform("/base_link", "/safe_link", rospy.Time(0))
-        
-        #trans[0] is x
+
+        #trans :  xyz, rot : xyzw  
         # print(trans[0])
         move_toward_marker(trans,rot)
 
-        # quaternion check and Euler check
+        # quaternion check and Euler check   ===> rot is quaternion
+
+def euler_from_quaternion(x, y, z, w):
+        """
+        Convert a quaternion into euler angles (roll, pitch, yaw)
+        roll is rotation around x in radians (counterclockwise)
+        pitch is rotation around y in radians (counterclockwise)
+        yaw is rotation around z in radians (counterclockwise)
+        """
+        t0 = +2.0 * (w * x + y * z)
+        t1 = +1.0 - 2.0 * (x * x + y * y)
+        roll_x = math.atan2(t0, t1)
+     
+        t2 = +2.0 * (w * y - z * x)
+        t2 = +1.0 if t2 > +1.0 else t2
+        t2 = -1.0 if t2 < -1.0 else t2
+        pitch_y = math.asin(t2)
+     
+        t3 = +2.0 * (w * z + x * y)
+        t4 = +1.0 - 2.0 * (y * y + z * z)
+        yaw_z = math.atan2(t3, t4)
+     
+        return roll_x, pitch_y, yaw_z # in radians
 
 def move_toward_marker(trans, rot):
     goal = MoveBaseGoal()
+
+    roll, pitch, yaw = euler_from_quaternion(rot[0], rot[1], rot[2], rot[3])
+
     ac = actionlib.SimpleActionClient("move_base", MoveBaseAction)
 
     goal.target_pose.header.frame_id = "map"
@@ -62,6 +84,24 @@ def move_toward_marker(trans, rot):
     # print(trans[0])
     
     ac.send_goal(goal) 
+
+    odom_info = topic_sub()
+    r, p, y = euler_from_quaternion(odom_info.current_robot_pose.orientation.x, odom_info.current_robot_pose.orientation.y, odom_info.current_robot_pose.orientation.z, odom_info.current_robot_pose.orientation.w)
+
+    x_start = odom_info.current_robot_pose.pose.position.x
+    y_start = odom_info.current_robot_pose.pose.position.y
+    theta_start = 2 * np.pi * y - np.pi #odom yaw radian
+    
+    x_goal = goal.target_pose.pose.position.x
+    y_goal = goal.target_pose.pose.position.y
+    theta_goal = 2 * np.pi * yaw - np.pi # goal yaw radian
+
+    print("Initial x: %.2f m\nInitial y: %.2f m\nInitial theta: %.2f rad\n" %
+            (x_start, y_start, theta_start))
+    print("Goal x: %.2f m\nGoal y: %.2f m\nGoal theta: %.2f rad\n" %
+            (x_goal, y_goal, theta_goal))
+
+    move_to_pose(x_start, y_start, theta_start, x_goal, y_goal, theta_goal)
 
 class PathFinderController:
     """
@@ -221,21 +261,8 @@ def transformation_matrix(x, y, theta):
 def main():
     rospy.init_node('move_to_pose')
     # while not rospy.is_shutdown():
-    s = topic_sub()
+    topic_sub()
     tf_listener()
-    # for i in range(5):
-    #     x_start = 20 * random()
-    #     y_start = 20 * random()
-    #     theta_start = 2 * np.pi * random() - np.pi
-    #     x_goal = 20 * random()
-    #     y_goal = 20 * random()
-    #     theta_goal = 2 * np.pi * random() - np.pi
-    #     print("Initial x: %.2f m\nInitial y: %.2f m\nInitial theta: %.2f rad\n" %
-    #           (x_start, y_start, theta_start))
-    #     print("Goal x: %.2f m\nGoal y: %.2f m\nGoal theta: %.2f rad\n" %
-    #           (x_goal, y_goal, theta_goal))
-    #     move_to_pose(x_start, y_start, theta_start, x_goal, y_goal, theta_goal)
-
 
 if __name__ == '__main__':
     main()
