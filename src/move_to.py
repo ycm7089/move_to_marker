@@ -7,7 +7,7 @@ import rospy
 import math
 from actionlib_msgs.msg import *
 from cm_aruco_msgs.msg import Aruco_marker
-from geometry_msgs.msg import Pose
+from geometry_msgs.msg import Pose, Twist
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from nav_msgs.msg import Odometry
 import tf
@@ -21,6 +21,7 @@ class topic_sub:
     def __init__(self):
         self.robot_pose_sub = rospy.Subscriber("/odom",Odometry, self.odom_callback)
         self.marker_pose_sub = rospy.Subscriber("/aruco_poses", Aruco_marker, self.marker_callback) #marker pose
+        self.vel_pub = rospy.Publisher("/cmd_vel", Twist, queue_size = 1)
         
     def odom_callback(self, msg):
         self.current_robot_pose = msg
@@ -210,6 +211,19 @@ def move_to_pose(x_start, y_start, theta_start, x_goal, y_goal, theta_goal):
             w = np.sign(w) * MAX_ANGULAR_SPEED
 
         theta = theta + w * dt
+        robot_vel = Twist()
+        
+        robot_vel.linear.x = v * np.cos(theta)
+        robot_vel.linear.y = v * np.sin(theta)
+        robot_vel.linear.z = 0.0
+
+        robot_vel.angular.x = 0.0
+        robot_vel.angular.y = 0.0
+        robot_vel.angular.z = w
+        robot_vel.angular.w = 1.0
+
+        vel_pub.publish(robot_vel)
+
         x = x + v * np.cos(theta) * dt
         y = y + v * np.sin(theta) * dt
 
