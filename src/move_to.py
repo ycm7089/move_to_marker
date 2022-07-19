@@ -177,8 +177,8 @@ controller = PathFinderController(9, 15, 3)
 dt = 0.01
 
 # Robot specifications
-MAX_LINEAR_SPEED = 15
-MAX_ANGULAR_SPEED = 7
+MAX_LINEAR_SPEED = 1
+MAX_ANGULAR_SPEED = 1
 
 show_animation = True
 
@@ -213,8 +213,9 @@ def move_to_pose(x_start, y_start, theta_start, x_goal, y_goal, theta_goal):
         theta = theta + w * dt
         robot_vel = Twist()
         
-        robot_vel.linear.x = v * np.cos(theta)
-        robot_vel.linear.y = v * np.sin(theta)
+        # robot_vel.linear.x = v * np.cos(theta)
+        robot_vel.linear.x = v
+        robot_vel.linear.y = 0.0
         robot_vel.linear.z = 0.0
 
         robot_vel.angular.x = 0.0
