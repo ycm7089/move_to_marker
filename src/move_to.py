@@ -1,56 +1,40 @@
 #!/usr/bin/env python3
 
-from turtle import distance
-import matplotlib.pyplot as plt
 import numpy as np
 import actionlib
 import rospy
 import math
 from actionlib_msgs.msg import *
-from cm_aruco_msgs.msg import Aruco_marker
-from geometry_msgs.msg import Pose, Twist, PoseWithCovarianceStamped
+from geometry_msgs.msg import Twist
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from nav_msgs.msg import Odometry
 import tf
 
-# current_robot_pose = Odometry()
-# current_marker_pose = Pose()
-
 class RosClient:
     def __init__(self):
         self.odom_pose_sub = rospy.Subscriber("/odom",Odometry, self.odom_callback)
-        self.map_pose_sub = rospy.Subscriber("/pose",PoseWithCovarianceStamped, self.map_callback)
-        self.marker_pose_sub = rospy.Subscriber("/aruco_poses", Aruco_marker, self.marker_callback) #marker pose
 
         self.odom_pose = Odometry()
-        self.map_pose = PoseWithCovarianceStamped()
         self.listener = tf.TransformListener()
         self.trans= []
         self.rot= []
+
+        self.is_reach_goal = False
         
     def odom_callback(self, msg):
         self.odom_pose = msg
-
-        # move_toward_marker(self.trans,self.rot, self.odom_pose.pose)
-
-    def map_callback(self, msg):
-        self.map_pose = msg
-
-    def marker_callback(self, msg):
-        self.current_marker_pose = msg
 
     def tf_listener(self):
         
         while not rospy.is_shutdown():
             self.listener.waitForTransform('/odom','/safe_link',rospy.Time(0), rospy.Duration(4.0))
             (self.trans, self.rot) = self.listener.lookupTransform("/odom", "/safe_link", rospy.Time(0))
-
             #trans :  xyz, rot : xyzw  
-            # print(trans[0])
-            move_toward_marker(self.trans,self.rot, self.odom_pose.pose)
-            # move_toward_marker(self.trans,self.rot, self.map_pose.pose)
 
-            # quaternion check and Euler check   ===> rot is quaternion
+            if not self.is_reach_goal:
+                self.is_reach_goal = move_toward_marker(self.trans,self.rot, self.odom_pose.pose)
+            else:
+                print("Gooooooooooooal!!")
 
 def euler_from_quaternion(x, y, z, w):
         """
@@ -78,7 +62,7 @@ def move_toward_marker(trans, rot, current_robot_pose):
     goal = MoveBaseGoal()
 
     roll, pitch, yaw = euler_from_quaternion(rot[0], rot[1], rot[2], rot[3])
-    # print(yaw)
+
     # ac = actionlib.SimpleActionClient("move_base", MoveBaseAction)
 
     goal.target_pose.header.frame_id = "map"
@@ -88,40 +72,29 @@ def move_toward_marker(trans, rot, current_robot_pose):
     goal.target_pose.pose.orientation.y = 0
     goal.target_pose.pose.orientation.z = rot[2]
     goal.target_pose.pose.orientation.w = rot[3]
-    
+
     goal.target_pose.pose.position.x = trans[0]
     goal.target_pose.pose.position.y = trans[1]
     goal.target_pose.pose.position.z = 0
-    # print(trans[0])
-    
-    distance = math.sqrt(goal.target_pose.pose.position.x * goal.target_pose.pose.position.x + goal.target_pose.pose.position.y * goal.target_pose.pose.position.y)
 
     # ac.send_goal(goal) 
     
-    odom_info = PoseWithCovarianceStamped()
+    odom_info = Odometry()
     odom_info = current_robot_pose
-    # print(odom_info)
 
     r, p, y = euler_from_quaternion(odom_info.pose.orientation.x, odom_info.pose.orientation.y, odom_info.pose.orientation.z, odom_info.pose.orientation.w)
 
     x_start = odom_info.pose.position.x
     y_start = odom_info.pose.position.y
-    # theta_start = 2 * np.pi * y - np.pi #odom yaw radian
-    theta_start = y
+    theta_start = y #radian
 
     x_goal = goal.target_pose.pose.position.x
     y_goal = goal.target_pose.pose.position.y
-    # theta_goal = 2 * np.pi * yaw - np.pi # goal yaw radian
-    theta_goal = yaw
+    theta_goal = yaw #radian
 
-    print("Yaw is %.2f")
-    print("Initial x: %.2f m\nInitial y: %.2f m\nInitial theta: %.2f rad\n" %
-            (x_start, y_start, theta_start))
-    print("Goal x: %.2f m\nGoal y: %.2f m\nGoal theta: %.2f rad\n" %
-            (x_goal, y_goal, theta_goal))
-    print('====' * 5)
+    is_reach_goal = move_to_pose(x_start, y_start, theta_start, x_goal, y_goal, theta_goal)
 
-    move_to_pose(x_start, y_start, theta_start, x_goal, y_goal, theta_goal)
+    return is_reach_goal
 
 class PathFinderController:
     """
@@ -179,6 +152,7 @@ class PathFinderController:
         # from 0 rad to 2*pi rad with slight turn
 
         rho = np.hypot(x_diff, y_diff)
+
         alpha = (np.arctan2(y_diff, x_diff)
                  - theta + np.pi) % (2 * np.pi) - np.pi
         beta = (theta_goal - theta - alpha + np.pi) % (2 * np.pi) - np.pi
@@ -187,22 +161,19 @@ class PathFinderController:
 
         if alpha > np.pi / 2 or alpha < -np.pi / 2:
             v = -v
-
+        # print("rho : %.2f alpha : %.2f beta : %.2f linear vel : %.2f angular vel : %.2f" % (rho, alpha, beta, v, w))
         return rho, v, w
 
-
 # simulation parameters
-controller = PathFinderController(9, 15, 3)
-dt = 0.01
+controller = PathFinderController(1, 1, 1)
 
 # Robot specifications
-MAX_LINEAR_SPEED = 1
-MAX_ANGULAR_SPEED = 1
-
-show_animation = True
-
+MAX_LINEAR_SPEED = 0.15
+MAX_ANGULAR_SPEED = 0.15
 
 def move_to_pose(x_start, y_start, theta_start, x_goal, y_goal, theta_goal):
+    is_reach_goal = False
+
     x = x_start
     y = y_start
     theta = theta_start
@@ -213,95 +184,69 @@ def move_to_pose(x_start, y_start, theta_start, x_goal, y_goal, theta_goal):
     x_traj, y_traj = [], []
 
     rho = np.hypot(x_diff, y_diff)
-    while rho > 0.001:
+
+    if rho > 0.15:
         x_traj.append(x)
         y_traj.append(y)
-
+        
         x_diff = x_goal - x
         y_diff = y_goal - y
 
         rho, v, w = controller.calc_control_command(
             x_diff, y_diff, theta, theta_goal)
         
-        # print(w)
-        if abs(v) > MAX_LINEAR_SPEED:
-            v = np.sign(v) * MAX_LINEAR_SPEED
+        # print(rho)
 
+        if abs(v) > MAX_LINEAR_SPEED:
+            v = MAX_LINEAR_SPEED
+            
         if abs(w) > MAX_ANGULAR_SPEED:
             w = np.sign(w) * MAX_ANGULAR_SPEED
 
-        theta = theta + w * dt
-        robot_vel = Twist()
+    else :
+        # theta_goal = goal
+        # theta = robot
+        att = theta - theta_goal
+
+        v = 0.0
+
+        if att > 0:
+            att = -(att)
+                                    
+        elif att < 0:
+            att = abs(att)
         
-        # robot_vel.linear.x = v * np.cos(theta)
-        robot_vel.linear.x = v 
-        robot_vel.linear.y = 0.0
-        robot_vel.linear.z = 0.0
+        w = att
 
-        robot_vel.angular.x = 0.0
-        robot_vel.angular.y = 0.0
-        robot_vel.angular.z = w
-        # robot_vel.angular.w = 1.0
-        # print(robot_vel.linear.x)
-        
-        vel_pub = rospy.Publisher("/cmd_vel", Twist, queue_size = 1)
-        vel_pub.publish(robot_vel)
+        if w > MAX_ANGULAR_SPEED:
+            w = np.sign(w) * MAX_ANGULAR_SPEED
 
-        x = x + v * np.cos(theta) * dt
-        y = y + v * np.sin(theta) * dt
+        elif abs(w) < 0.001 :
+            w = 0.0
+            is_reach_goal = True
 
-        # if show_animation:  # pragma: no cover
-        #     plt.cla()
-        #     plt.arrow(x_start, y_start, np.cos(theta_start),
-        #               np.sin(theta_start), color='r', width=0.1)
-        #     plt.arrow(x_goal, y_goal, np.cos(theta_goal),
-        #               np.sin(theta_goal), color='g', width=0.1)
-        #     plot_vehicle(x, y, theta, x_traj, y_traj)
+    print("speed (v : %.2f w : %.6f) distance_to_marker(x : %.2f y : %.2f total %.2f)"% (v, w * 180.0 / math.pi, x_diff, y_diff, rho))
+    
+    robot_vel = Twist()
 
+    robot_vel.linear.x = v 
+    robot_vel.linear.y = 0.0
+    robot_vel.linear.z = 0.0
 
-def plot_vehicle(x, y, theta, x_traj, y_traj):  # pragma: no cover
-    # Corners of triangular vehicle when pointing to the right (0 radians)
-    p1_i = np.array([0.5, 0, 1]).T
-    p2_i = np.array([-0.5, 0.25, 1]).T
-    p3_i = np.array([-0.5, -0.25, 1]).T
+    robot_vel.angular.x = 0.0
+    robot_vel.angular.y = 0.0
+    robot_vel.angular.z = w
+    
+    vel_pub = rospy.Publisher("/cmd_vel", Twist, queue_size = 1)
+    vel_pub.publish(robot_vel)
 
-    T = transformation_matrix(x, y, theta)
-    p1 = np.matmul(T, p1_i)
-    p2 = np.matmul(T, p2_i)
-    p3 = np.matmul(T, p3_i)
-
-    plt.plot([p1[0], p2[0]], [p1[1], p2[1]], 'k-')
-    plt.plot([p2[0], p3[0]], [p2[1], p3[1]], 'k-')
-    plt.plot([p3[0], p1[0]], [p3[1], p1[1]], 'k-')
-
-    plt.plot(x_traj, y_traj, 'b--')
-
-    # for stopping simulation with the esc key.
-    plt.gcf().canvas.mpl_connect(
-        'key_release_event',
-        lambda event: [exit(0) if event.key == 'escape' else None])
-
-    plt.xlim(-2, 2)
-    plt.ylim(-2, 2)
-
-    plt.pause(dt)
-
-
-def transformation_matrix(x, y, theta):
-    return np.array([
-        [np.cos(theta), -np.sin(theta), x],
-        [np.sin(theta), np.cos(theta), y],
-        [0, 0, 1]
-    ])
-
+    return is_reach_goal        
 
 def main():
     rospy.init_node('move_to_pose')
-    # while not rospy.is_shutdown():
     
     ros_client = RosClient()
-    ros_client.tf_listener()
-    
+    ros_client.tf_listener()    
 
 if __name__ == '__main__':
     main()
