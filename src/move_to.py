@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from http import client
+from sre_constants import SUCCESS
 import numpy as np
 import actionlib
 import rospy
@@ -13,6 +15,9 @@ import tf
 class RosClient:
     def __init__(self):
         self.odom_pose_sub = rospy.Subscriber("/odom",Odometry, self.odom_callback)
+        self.client = actionlib.SimpleActionClient("/move_base", MoveBaseAction)
+        self.client.wait_for_server()
+        print("dalkjgndfjdfkgkn")
 
         self.odom_pose = Odometry()
         self.listener = tf.TransformListener()
@@ -20,6 +25,7 @@ class RosClient:
         self.rot= []
 
         self.is_reach_goal = False
+        self.is_move_reach_goal = False
         
     def odom_callback(self, msg):
         self.odom_pose = msg
@@ -32,7 +38,36 @@ class RosClient:
             #trans :  xyz, rot : xyzw  
 
             if not self.is_reach_goal:
-                self.is_reach_goal = move_toward_marker(self.trans,self.rot, self.odom_pose.pose)
+                if not self.is_move_reach_goal:
+                    move_base_goal = MoveBaseGoal()
+                    roll, pitch, yaw = euler_from_quaternion(self.rot[0], self.rot[1], self.rot[2], self.rot[3])
+
+                    move_base_goal.target_pose.header.frame_id = "map"
+                    move_base_goal.target_pose.header.stamp = rospy.Time.now()
+                 
+
+                    move_base_goal.target_pose.pose.orientation.x = 0
+                    move_base_goal.target_pose.pose.orientation.y = 0
+                    move_base_goal.target_pose.pose.orientation.z = -0.5955996416217676
+                    move_base_goal.target_pose.pose.orientation.w = 0.8032814369198519
+
+                    move_base_goal.target_pose.pose.position.x = 1.0
+                    move_base_goal.target_pose.pose.position.y = 0.12214826941490173
+                    move_base_goal.target_pose.pose.position.z = 0
+
+                    print("yaw is : %.3f"% (yaw * 180.0 / math.pi))
+                    print(self.trans[0], self.trans[1])
+                    self.client.send_goal(move_base_goal) 
+
+                    self.client.wait_for_result()
+
+                    if self.client.get_result():
+                        print("YES")
+                        self.is_move_reach_goal = True
+                
+                else :
+                    self.is_reach_goal = move_toward_marker(self.trans,self.rot, self.odom_pose.pose, self.client)
+                        
             else:
                 print("Gooooooooooooal!!")
 
@@ -58,62 +93,39 @@ def euler_from_quaternion(x, y, z, w):
      
         return roll_x, pitch_y, yaw_z # in radians
 
-def move_toward_marker(trans, rot, current_robot_pose):
+def move_toward_marker(trans, rot, current_robot_pose, client):
+    goal = MoveBaseGoal()
+    print("sssssssssss")
+    roll, pitch, yaw = euler_from_quaternion(rot[0], rot[1], rot[2], rot[3])
 
-    move_base_goal = MoveBaseGoal()
-    client = actionlib.SimpleActionClient("move_base", MoveBaseAction)
+    goal.target_pose.header.frame_id = "map"
+    goal.target_pose.header.stamp = rospy.Time.now()
     
-    move_base_goal.target_pose.header.frame_id = "map"
-    move_base_goal.target_pose.header.stamp = rospy.Time.now()
+    goal.target_pose.pose.orientation.x = 0
+    goal.target_pose.pose.orientation.y = 0
+    goal.target_pose.pose.orientation.z = rot[2]
+    goal.target_pose.pose.orientation.w = rot[3]
 
-    move_base_goal.target_pose.pose.orientation.x = 0
-    move_base_goal.target_pose.pose.orientation.y = 0
-    move_base_goal.target_pose.pose.orientation.z = rot[2]
-    move_base_goal.target_pose.pose.orientation.w = rot[3]
+    goal.target_pose.pose.position.x = trans[0]
+    goal.target_pose.pose.position.y = trans[1]
+    goal.target_pose.pose.position.z = 0
+    
+    odom_info = Odometry()
+    odom_info = current_robot_pose
 
-    move_base_goal.target_pose.pose.position.x = trans[0] - 0.3
-    move_base_goal.target_pose.pose.position.y = trans[1]
-    move_base_goal.target_pose.pose.position.z = 0
+    r, p, y = euler_from_quaternion(odom_info.pose.orientation.x, odom_info.pose.orientation.y, odom_info.pose.orientation.z, odom_info.pose.orientation.w)
 
-    client.send_goal(move_base_goal) 
-    wait = client.wait_for_result()
+    x_start = odom_info.pose.position.x
+    y_start = odom_info.pose.position.y
+    theta_start = y #radian
 
-    if not wait:
-        print("gogogogo")
+    x_goal = goal.target_pose.pose.position.x
+    y_goal = goal.target_pose.pose.position.y
+    theta_goal = yaw #radian
 
-    else :
-        goal = MoveBaseGoal()
+    is_reach_goal = move_to_pose(x_start, y_start, theta_start, x_goal, y_goal, theta_goal)
 
-        roll, pitch, yaw = euler_from_quaternion(rot[0], rot[1], rot[2], rot[3])
-
-        goal.target_pose.header.frame_id = "map"
-        goal.target_pose.header.stamp = rospy.Time.now()
-        
-        goal.target_pose.pose.orientation.x = 0
-        goal.target_pose.pose.orientation.y = 0
-        goal.target_pose.pose.orientation.z = rot[2]
-        goal.target_pose.pose.orientation.w = rot[3]
-
-        goal.target_pose.pose.position.x = trans[0]
-        goal.target_pose.pose.position.y = trans[1]
-        goal.target_pose.pose.position.z = 0
-        
-        odom_info = Odometry()
-        odom_info = current_robot_pose
-
-        r, p, y = euler_from_quaternion(odom_info.pose.orientation.x, odom_info.pose.orientation.y, odom_info.pose.orientation.z, odom_info.pose.orientation.w)
-
-        x_start = odom_info.pose.position.x
-        y_start = odom_info.pose.position.y
-        theta_start = y #radian
-
-        x_goal = goal.target_pose.pose.position.x
-        y_goal = goal.target_pose.pose.position.y
-        theta_goal = yaw #radian
-
-        is_reach_goal = move_to_pose(x_start, y_start, theta_start, x_goal, y_goal, theta_goal)
-
-        return is_reach_goal
+    return is_reach_goal
 
 class PathFinderController:
     """
