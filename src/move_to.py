@@ -1,5 +1,3 @@
-
-
 #!/usr/bin/env python3
 
 from http import client
@@ -16,9 +14,17 @@ import tf
 
 class RosClient:
     def __init__(self):
+        
+        # publihser
         self.odom_pose_sub = rospy.Subscriber("/odom",Odometry, self.odom_callback)
+
+        # action server
         self.client = actionlib.SimpleActionClient("/move_base", MoveBaseAction)
         self.client.wait_for_server()
+
+        # action server (docking)
+        # self.docking_client = action ~~~~~
+
         print("dalkjgndfjdfkgkn")
 
         self.odom_pose = Odometry()
@@ -53,15 +59,18 @@ class RosClient:
 
                     move_base_goal.target_pose.pose.orientation.x = 0
                     move_base_goal.target_pose.pose.orientation.y = 0
-                    move_base_goal.target_pose.pose.orientation.z = map_rot[2]
-                    move_base_goal.target_pose.pose.orientation.w = map_rot[3]
-
-                    move_base_goal.target_pose.pose.position.x = map_trans[0]
-                    move_base_goal.target_pose.pose.position.y = map_trans[1]
+                    # move_base_goal.target_pose.pose.orientation.z = -0.6580712166829297
+                    # move_base_goal.target_pose.pose.orientation.w = 0.7529556917730609
+                    # move_base_goal.target_pose.pose.position.x = 1.2797787189483643
+                    # move_base_goal.target_pose.pose.position.y = 0.07122102379798889
+                    move_base_goal.target_pose.pose.orientation.z = self.map_rot[2]
+                    move_base_goal.target_pose.pose.orientation.w = self.map_rot[3]
+                    move_base_goal.target_pose.pose.position.x = self.map_trans[0]
+                    move_base_goal.target_pose.pose.position.y = self.map_trans[1] + 0.3
                     move_base_goal.target_pose.pose.position.z = 0
 
-                    print("yaw is : %.3f"% (yaw * 180.0 / math.pi))
-                    print(self.map_trans[0], self.map_trans[1])
+                    # print("yaw is : %.3f"% (yaw * 180.0 / math.pi))
+                    # print(self.map_trans[0], self.map_trans[1], self.map_rot[2])
                     
                     self.client.send_goal(move_base_goal) 
 
@@ -70,6 +79,12 @@ class RosClient:
                     if self.client.get_result():
                         print("YES")
                         self.is_move_reach_goal = True
+
+                        # self.docking_client.send_goal(start)
+                        # self.docking_client.wait_for_result()
+                        # self.docking_client.get_result()  docking complete, marker univisible, 
+
+
                 
                 else :
                     self.is_reach_goal = move_toward_marker(self.trans,self.rot, self.odom_pose.pose, self.client)
