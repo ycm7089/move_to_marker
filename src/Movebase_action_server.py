@@ -1,21 +1,16 @@
-#! /usr/bin/env python3
-
-#https://swimminglab.tistory.com/100
-
 import rospy
 
 import actionlib
 
-import actionlib_tutorials.msg
+import move_to_marker.msg
 
-class FibonacciAction(object):
-    # create messages that are used to publish feedback/result
-    _feedback = actionlib_tutorials.msg.FibonacciFeedback()
-    _result = actionlib_tutorials.msg.FibonacciResult()
+class MoveBaseAction(object) :
+    _feedback = move_to_marker.msg.MovebaseFeedback()
+    _result = move_to_marker.msg.MovebaseResult()
 
     def __init__(self, name):
         self._action_name = name
-        self._as = actionlib.SimpleActionServer(self._action_name, actionlib_tutorials.msg.FibonacciAction, execute_cb=self.execute_cb, auto_start = False)
+        self._as = actionlib.SimpleActionServer(self._action_name, move_to_marker.msg.MovebaseAction, execute_cb=self.execute_cb, auto_start = False)
         self._as.start()
       
     def execute_cb(self, goal):
@@ -23,13 +18,13 @@ class FibonacciAction(object):
         r = rospy.Rate(1)
         success = True
         
-        # append the seeds for the fibonacci sequence
+        # append the seeds for the Movebase sequence
         self._feedback.sequence = []
         self._feedback.sequence.append(0)
         self._feedback.sequence.append(1)
         
         # publish info to the console for the user
-        rospy.loginfo('%s: Executing, creating fibonacci sequence of order %i with seeds %i, %i' % (self._action_name, goal.order, self._feedback.sequence[0], self._feedback.sequence[1]))
+        rospy.loginfo('%s: Executing, creating Movebase sequence of order %i with seeds %i, %i' % (self._action_name, goal.order, self._feedback.sequence[0], self._feedback.sequence[1]))
         
         # start executing the action
         for i in range(1, goal.order):
@@ -51,6 +46,6 @@ class FibonacciAction(object):
             self._as.set_succeeded(self._result)
         
 if __name__ == '__main__':
-    rospy.init_node('fibonacci')
-    server = FibonacciAction(rospy.get_name())
+    rospy.init_node('Movebase_server')
+    server = MovebaseAction(rospy.get_name())
     rospy.spin()
