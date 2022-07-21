@@ -1,3 +1,5 @@
+
+
 #!/usr/bin/env python3
 
 from http import client
@@ -21,6 +23,7 @@ class RosClient:
 
         self.odom_pose = Odometry()
         self.listener = tf.TransformListener()
+        self.map_listener = tf.TransformListener()
         self.trans= []
         self.rot= []
 
@@ -35,28 +38,31 @@ class RosClient:
         while not rospy.is_shutdown():
             self.listener.waitForTransform('/odom','/safe_link',rospy.Time(0), rospy.Duration(4.0))
             (self.trans, self.rot) = self.listener.lookupTransform("/odom", "/safe_link", rospy.Time(0))
+
+            self.map_listener.waitForTransform('/map','/safe_link',rospy.Time(0), rospy.Duration(4.0))
+            (self.map_trans, self.map_rot) = self.map_listener.lookupTransform("/map", "/safe_link", rospy.Time(0))
             #trans :  xyz, rot : xyzw  
 
             if not self.is_reach_goal:
                 if not self.is_move_reach_goal:
                     move_base_goal = MoveBaseGoal()
-                    roll, pitch, yaw = euler_from_quaternion(self.rot[0], self.rot[1], self.rot[2], self.rot[3])
+                    roll, pitch, yaw = euler_from_quaternion(self.map_rot[0], self.map_rot[1], self.map_rot[2], self.map_rot[3])
 
                     move_base_goal.target_pose.header.frame_id = "map"
-                    move_base_goal.target_pose.header.stamp = rospy.Time.now()
-                 
+                    move_base_goal.target_pose.header.stamp = rospy.Time.now()                 
 
                     move_base_goal.target_pose.pose.orientation.x = 0
                     move_base_goal.target_pose.pose.orientation.y = 0
-                    move_base_goal.target_pose.pose.orientation.z = -0.5955996416217676
-                    move_base_goal.target_pose.pose.orientation.w = 0.8032814369198519
+                    move_base_goal.target_pose.pose.orientation.z = map_rot[2]
+                    move_base_goal.target_pose.pose.orientation.w = map_rot[3]
 
-                    move_base_goal.target_pose.pose.position.x = 1.0
-                    move_base_goal.target_pose.pose.position.y = 0.12214826941490173
+                    move_base_goal.target_pose.pose.position.x = map_trans[0]
+                    move_base_goal.target_pose.pose.position.y = map_trans[1]
                     move_base_goal.target_pose.pose.position.z = 0
 
                     print("yaw is : %.3f"% (yaw * 180.0 / math.pi))
-                    print(self.trans[0], self.trans[1])
+                    print(self.map_trans[0], self.map_trans[1])
+                    
                     self.client.send_goal(move_base_goal) 
 
                     self.client.wait_for_result()
