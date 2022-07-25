@@ -53,8 +53,14 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate messages in the 'msg' folder
 # add_message_files(
 #   FILES
-#   Message1.msg
-#   Message2.msg
+#   cm_MovebaseAction.msg
+#   cm_MovebaseActionFeedback.msg
+#   cm_MovebaseActionGoal.msg
+#   cm_MovebaseActionResult.msg
+#   cm_MovebaseFeedback.msg
+#   cm_MovebaseGoal.msg
+#   cm_MovebaseResult.msg
+#   cm_recoveryStatus.msg
 # )
 
 ## Generate services in the 'srv' folder
@@ -65,11 +71,10 @@ find_package(catkin REQUIRED COMPONENTS
 # )
 
 ## Generate actions in the 'action' folder
-# add_action_files(
-#   FILES
-#   Action1.action
-#   Action2.action
-# )
+#add_action_files(
+#  FILES
+#  cm_Movebase.action
+#)
 
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
