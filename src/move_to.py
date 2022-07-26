@@ -17,7 +17,6 @@ class RosClient:
         
         # publihser
         self.odom_pose_sub = rospy.Subscriber("/odom",Odometry, self.odom_callback)
-
         # action server
         self.client = actionlib.SimpleActionClient("/move_base", MoveBaseAction)
         self.client.wait_for_server()
