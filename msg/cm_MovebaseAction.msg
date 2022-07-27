@@ -1,3 +1,0 @@
-MovebaseActionGoal action_goal
-MovebaseActionResult action_result
-MovebaseActionFeedback action_feedback
