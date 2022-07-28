@@ -21,7 +21,7 @@ class MoveBaseClient:
         # input robot's goal position x,y & orientation z,w in first_goal_list and second_goal_list
         self.move_base_list = []
         self.first_goal_list  = [1.0049941539764404, -0.005708754062652588, -0.9999863695455604, 0.005221180239162203]
-        self.second_goal_list = [3.0, 0.0 , 0.0, 0.0]
+        self.second_goal_list = [2.8684380054473877, 0.48713570833206177 , 0.11430083532461724, 0.9934461832651503]
 
         self.move_base_list.append(self.first_goal_list)
         self.move_base_list.append(self.second_goal_list)
@@ -117,7 +117,7 @@ class MultiClient :
                 self._is_reach_multi_goal = True
             else :
                 print("Docking isn't complete")
-                
+
         else :
             print("Multi Cycle Complete!!")           
 
