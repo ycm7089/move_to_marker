@@ -44,7 +44,7 @@ class MoveBaseClient:
             self.move_base_goal.target_pose.pose.orientation.y = 0.0
             self.move_base_goal.target_pose.pose.orientation.z = self.move_base_list[self.cnt][2]
             self.move_base_goal.target_pose.pose.orientation.w = self.move_base_list[self.cnt][3]
-
+            
             self.client.send_goal(self.move_base_goal) 
 
             self.client.wait_for_result()
@@ -56,7 +56,7 @@ class MoveBaseClient:
 
                 self.go_to_docking.move_to_safe()
 
-                self.cnt = self.cnt + 1
+                self.cnt = self.cnt + 1 
     
 class DockingClient:
     def __init__(self):
@@ -117,7 +117,7 @@ class MultiClient :
                 self._is_reach_multi_goal = True
             else :
                 print("Docking isn't complete")
-
+                
         else :
             print("Multi Cycle Complete!!")           
 
