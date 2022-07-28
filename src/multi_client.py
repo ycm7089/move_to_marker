@@ -29,7 +29,6 @@ class MoveBaseClient:
         self.cnt = 0
 
     def move_to_goal(self) :
-        
         if not self.move_reach_goal:
             print(" %dth MoveBase action start" % (self.cnt + 1)) 
 
@@ -69,29 +68,29 @@ class DockingClient:
         self.docking_reach_goal = False
 
     def move_to_safe(self):
-        print("Docking action start")
         
-        self.docking_reach_goal = False
+        
+        if not self.docking_reach_goal:
+            print("Docking action start")
+            self.docking_goal.target_pose.header.frame_id = "map"
+            self.docking_goal.target_pose.header.stamp = rospy.Time.now()
+            
+            self.docking_goal.target_pose.pose.position.x = 0.0
+            self.docking_goal.target_pose.pose.position.y = 0.0
+            self.docking_goal.target_pose.pose.position.z = 0.0   
+            
+            self.docking_goal.target_pose.pose.orientation.x = 0.0
+            self.docking_goal.target_pose.pose.orientation.y = 0.0
+            self.docking_goal.target_pose.pose.orientation.z = 0.0
+            self.docking_goal.target_pose.pose.orientation.w = 0.0     
+            
+            self.docking_client.send_goal(self.docking_goal)
 
-        self.docking_goal.target_pose.header.frame_id = "map"
-        self.docking_goal.target_pose.header.stamp = rospy.Time.now()
-        
-        self.docking_goal.target_pose.pose.position.x = 0.0
-        self.docking_goal.target_pose.pose.position.y = 0.0
-        self.docking_goal.target_pose.pose.position.z = 0.0   
-        
-        self.docking_goal.target_pose.pose.orientation.x = 0.0
-        self.docking_goal.target_pose.pose.orientation.y = 0.0
-        self.docking_goal.target_pose.pose.orientation.z = 0.0
-        self.docking_goal.target_pose.pose.orientation.w = 0.0     
-        
-        self.docking_client.send_goal(self.docking_goal)
+            self.docking_client.wait_for_result()
 
-        self.docking_client.wait_for_result()
-
-        if self.docking_client.get_result():
-            print("Docking Complete!!")
-            self.docking_reach_goal = True
+            if self.docking_client.get_result():
+                print("Docking Complete!!")
+                self.docking_reach_goal = True
 
         return self.docking_reach_goal
 
@@ -99,20 +98,21 @@ class MultiClient :
     def __init__(self) :
 
         self.move_base_result = MoveBaseClient()
-        self.docking_result = DockingClient()
+        # self.docking_result = DockingClient()
         
         self._is_reach_multi_goal = False
 
     def Cycle(self):
 
         if not self._is_reach_multi_goal :
-            self.move_base_result.move_to_goal()
-
+            self.move_base_result.move_to_goal() 
+            
             # when below code is True, it will perform
-            if self.docking_result.move_to_safe() :
+            if self.move_base_result.go_to_docking.move_to_safe() :
+                self.move_base_result.move_reach_goal = False
+                self.move_base_result.move_to_goal()
 
-                self.move_base_result.move_reach_goal()
-                print(self.move_base_result.move_reach_goal())
+                print(self.move_base_result.move_reach_goal)
 
                 self._is_reach_multi_goal = True
             else :

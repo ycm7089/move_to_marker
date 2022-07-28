@@ -138,6 +138,7 @@ class DockingServer(object):
         self._marker_visible = False
 
         self.move = DockingMoveTo()
+        self.reached = False
 
         self.server.start()
 
@@ -176,7 +177,7 @@ class DockingServer(object):
     def execute_cb(self, Docking_goal):
 
         print(self._marker_visible)
-        while True:
+        while not self._reach_Docking_goal:
             if self._marker_visible :
                 if not self._reach_Docking_goal :
                     rospy.sleep(0.01)
