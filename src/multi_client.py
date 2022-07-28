@@ -4,100 +4,128 @@ import actionlib
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 import rospy
 import math
-from nav_msgs.msg import Odometry
+
+# if Aruco marker is a lot, this code will need Aruco ID 
 
 class MoveBaseClient:
     def __init__(self):
+
         self.client = actionlib.SimpleActionClient("/move_base", MoveBaseAction)
         self.client.wait_for_server()
         
+        self.move_reach_goal = False
 
-        self.is_move_reach_goal = False
-
+        self.move_base_goal = MoveBaseGoal()
         self.go_to_docking = DockingClient()
+        
+        # input robot's goal position x,y & orientation z,w in first_goal_list and second_goal_list
+        self.move_base_list = []
+        self.first_goal_list  = [1.0049941539764404, -0.005708754062652588, -0.9999863695455604, 0.005221180239162203]
+        self.second_goal_list = [3.0, 0.0 , 0.0, 0.0]
+
+        self.move_base_list.append(self.first_goal_list)
+        self.move_base_list.append(self.second_goal_list)
+
+        self.cnt = 0
 
     def move_to_goal(self) :
-                   
-        if not self.is_move_reach_goal:
-            print("MoveBase action start")
+        
+        if not self.move_reach_goal:
+            print(" %dth MoveBase action start" % (self.cnt + 1)) 
 
-            move_base_goal = MoveBaseGoal()
+            self.move_base_goal.target_pose.header.frame_id = "map"
+            self.move_base_goal.target_pose.header.stamp = rospy.Time.now()                 
 
-            move_base_goal.target_pose.header.frame_id = "map"
-            move_base_goal.target_pose.header.stamp = rospy.Time.now()                 
-
-            move_base_goal.target_pose.pose.position.x = 1.0049941539764404
-            move_base_goal.target_pose.pose.position.y = -0.005708754062652588
-            move_base_goal.target_pose.pose.position.z = 0
+            self.move_base_goal.target_pose.pose.position.x = self.move_base_list[self.cnt][0]
+            self.move_base_goal.target_pose.pose.position.y = self.move_base_list[self.cnt][1]
+            self.move_base_goal.target_pose.pose.position.z = 0.0
             
-            move_base_goal.target_pose.pose.orientation.x = 0
-            move_base_goal.target_pose.pose.orientation.y = 0
-            move_base_goal.target_pose.pose.orientation.z = -0.9999863695455604
-            move_base_goal.target_pose.pose.orientation.w = 0.005221180239162203
+            self.move_base_goal.target_pose.pose.orientation.x = 0.0
+            self.move_base_goal.target_pose.pose.orientation.y = 0.0
+            self.move_base_goal.target_pose.pose.orientation.z = self.move_base_list[self.cnt][2]
+            self.move_base_goal.target_pose.pose.orientation.w = self.move_base_list[self.cnt][3]
 
-            self.client.send_goal(move_base_goal) 
+            self.client.send_goal(self.move_base_goal) 
 
             self.client.wait_for_result()
 
             if self.client.get_result():
-                print("MoveBase_Action Complete!!")
+                print("%dth MoveBase_Action Complete!!"% (self.cnt + 1))
                 
-                self.is_move_reach_goal = True
+                self.move_reach_goal = True
+
                 self.go_to_docking.move_to_safe()
 
-
+                self.cnt = self.cnt + 1
+    
 class DockingClient:
     def __init__(self):
-        
-        # subscriber
-        self.odom_pose_sub = rospy.Subscriber("/odom",Odometry, self.odom_callback)
 
-        # docking server
         self.docking_client = actionlib.SimpleActionClient('/Docking_server', MoveBaseAction)
         self.docking_client.wait_for_server()
-      
 
-        self.odom_pose = Odometry()
-
-        self.trans= []
-        self.rot= []
-
-        self.is_reach_goal = False
+        self.docking_goal = MoveBaseGoal()
         
-    def odom_callback(self, msg):
-        self.odom_pose = msg
+        self.docking_reach_goal = False
 
     def move_to_safe(self):
         print("Docking action start")
-
-        goal = MoveBaseGoal()
-
-        goal.target_pose.header.frame_id = "map"
-        goal.target_pose.header.stamp = rospy.Time.now()
         
-        goal.target_pose.pose.orientation.x = 0
-        goal.target_pose.pose.orientation.y = 0
-        goal.target_pose.pose.orientation.z = 0.0
-        goal.target_pose.pose.orientation.w = 0.0
+        self.docking_reach_goal = False
 
-        goal.target_pose.pose.position.x = 0.0
-        goal.target_pose.pose.position.y = 0.0
-        goal.target_pose.pose.position.z = 0        
+        self.docking_goal.target_pose.header.frame_id = "map"
+        self.docking_goal.target_pose.header.stamp = rospy.Time.now()
         
-        self.docking_client.send_goal(goal)
+        self.docking_goal.target_pose.pose.position.x = 0.0
+        self.docking_goal.target_pose.pose.position.y = 0.0
+        self.docking_goal.target_pose.pose.position.z = 0.0   
+        
+        self.docking_goal.target_pose.pose.orientation.x = 0.0
+        self.docking_goal.target_pose.pose.orientation.y = 0.0
+        self.docking_goal.target_pose.pose.orientation.z = 0.0
+        self.docking_goal.target_pose.pose.orientation.w = 0.0     
+        
+        self.docking_client.send_goal(self.docking_goal)
 
         self.docking_client.wait_for_result()
 
         if self.docking_client.get_result():
             print("Docking Complete!!")
+            self.docking_reach_goal = True
 
+        return self.docking_reach_goal
 
+class MultiClient :
+    def __init__(self) :
+
+        self.move_base_result = MoveBaseClient()
+        self.docking_result = DockingClient()
+        
+        self._is_reach_multi_goal = False
+
+    def Cycle(self):
+
+        if not self._is_reach_multi_goal :
+            self.move_base_result.move_to_goal()
+
+            # when below code is True, it will perform
+            if self.docking_result.move_to_safe() :
+
+                self.move_base_result.move_reach_goal()
+                print(self.move_base_result.move_reach_goal())
+
+                self._is_reach_multi_goal = True
+            else :
+                print("Docking isn't complete")
+
+        else :
+            print("Multi Cycle Complete!!")           
 
 if __name__ == '__main__':
     try:
         rospy.init_node('Docking_server_client')
-        result = MoveBaseClient()
-        result.move_to_goal()
+        result = MultiClient()
+        result.Cycle()
 
     except rospy.ROSInterruptException:
         print("program interrupted before completion", file=sys.stderr)
