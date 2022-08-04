@@ -8,12 +8,15 @@ import cv2
 from cv2 import aruco
 import os
 import numpy as np
+from aruco_mapping.msg import ArucoMarker
+# from geometry_msgs import Pose
 
 class CameraImage():
     def __init__(self):
 
         self.rgb_image = Image()
         self.cv_br = CvBridge()
+        self.Aruco_Marker_Pose = ArucoMarker()
         
         self.k = np.array(
             [[1245.133331, 0.0, 1021.56411],
@@ -24,6 +27,7 @@ class CameraImage():
 
         # Subscribers
         self.image_sub = rospy.Subscriber("/camera/image_raw", Image, self.camera_cb)
+        self.marker_pose_pub = rospy.Publisher("Aruco_Pose", ArucoMarker, queue_size=1)
 
     def camera_cb(self, msg):
         
@@ -49,6 +53,7 @@ class CameraImage():
             for i in range(0, len(ids)):
                 # Estimate pose of each marker and return the values rvec and tvec---(different from those of camera coefficients)
                 # 0.1 : Aruco-Marker size, k : camera K, d : camera D
+                # should check rvec
                 rvec, tvec, markerPoints = cv2.aruco.estimatePoseSingleMarkers(bboxs[i], 0.1, self.k,
                                                                         self.d)
                 # Draw a square around the markers
@@ -56,7 +61,18 @@ class CameraImage():
 
                 # Draw Axis
                 cv2.aruco.drawAxis(img, self.k, self.d, rvec, tvec, 0.05)  
-                print(tvec)
+                print(rvec)
+
+                self.Aruco_Marker_Pose.num_of_visible_markers = 1
+                
+                self.Aruco_Marker_Pose.global_camera_pose.position.x = tvec[0][0][0]
+                self.Aruco_Marker_Pose.global_camera_pose.position.y = tvec[0][0][1]
+                self.Aruco_Marker_Pose.global_camera_pose.position.z = tvec[0][0][2]
+
+                self.marker_pose_pub.publish(self.Aruco_Marker_Pose)
+
+                if ids == 15 :
+                    print("Yes")
 
         return img
 
