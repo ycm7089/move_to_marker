@@ -53,7 +53,7 @@ class DockingMoveTo:
         else :
             # theta_goal = goal
             # theta = robot
-            print("YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY")
+            # print("YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY")
             att = theta - theta_goal
 
             v = 0.0
@@ -69,11 +69,13 @@ class DockingMoveTo:
             if w > MAX_ANGULAR_SPEED:
                 w = np.sign(w) * MAX_ANGULAR_SPEED
 
-            elif abs(w) < 0.001 :
+            elif abs(w) < 0.005 :
                 w = 0.0
                 is_reach_goal = True
-        print("======" * 15)
-        print("")
+                print(att, rho)
+                print("Docking Success")
+        # print("======" * 15)
+        # print("")
         # # print("speed (v : %.2f w : %.6f degree) distance_to_marker(x : %.2f y : %.2f total %.2f)"% (v, w * 180.0 / math.pi, x_diff, y_diff, rho))
         # print("")
 
@@ -160,7 +162,7 @@ class DockingServer(object):
         return self.roll_x, self.pitch_y, self.yaw_z # in radians
 
     def odom_callback(self, msg):
-        print("okay")
+        # print("okay")
         self.odom_pose = msg
 
         # while not rospy.is_shutdown():            
@@ -175,8 +177,10 @@ class DockingServer(object):
             print("tf listener ddong")
 
     def execute_cb(self, Docking_goal):
+        print("Docking Start")
+        # print(self._marker_visible)
+        self._reach_Docking_goal = False
 
-        print(self._marker_visible)
         while not self._reach_Docking_goal:
             if self._marker_visible :
                 if not self._reach_Docking_goal :
@@ -204,13 +208,13 @@ class DockingServer(object):
                     self._reach_Docking_goal = self.move.move_to_pose(x_start, y_start, theta_start, x_goal, y_goal, theta_goal)
 
                 else:
-                    # if self.server.is_preempt_requested():
-                    #     rospy.loginfo('%s: Preempted' % self._action_name)
-                    #     self.server.set_preempted()
-                    #     break
-                    # else :
-                    self.server.set_succeeded()
-                    print('Success')
+                    if self.server.is_preempt_requested():
+                        rospy.loginfo('%s: Preempted' % self._action_name)
+                        self.server.set_preempted()
+                        break
+                    else :
+                        self.server.set_succeeded()
+                        print('Success')
             else :
                 print("I can't see the marker")
 
