@@ -144,6 +144,9 @@ class DockingServer(object):
 
         self.server.start()
 
+        self.cnt = 0.0
+        self.markers_id = []
+
     def euler_from_quaternion(self, x, y, z, w):
 
         t0 = +2.0 * (w * x + y * z)
@@ -180,7 +183,8 @@ class DockingServer(object):
         print("Docking Start")
         # print(self._marker_visible)
         self._reach_Docking_goal = False
-
+        # if self.cnt > len(self.markers_id):
+        #     print("S")
         while not self._reach_Docking_goal:
             if self._marker_visible :
                 if not self._reach_Docking_goal :

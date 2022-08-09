@@ -2,6 +2,7 @@
 
 from lzma import MODE_FAST
 import actionlib
+from actionlib_msgs.msg import GoalStatus
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 import rospy
 import math
@@ -29,11 +30,19 @@ class MoveBaseClient:
 
             self.client.wait_for_result()
 
-            if self.client.get_result():
-                # print("%dth MoveBase_Action Complete!!"% (self.cnt + 1))
-                print("th MoveBase_Action Complete!!")
-                
-                self.move_reach_goal = True
+            result = self.client.get_result()
+            if result:
+                state = self.client.get_state()
+
+                print('get statae:', state)
+
+                if state == GoalStatus.SUCCEEDED:
+                    # print("%dth MoveBase_Action Complete!!"% (self.cnt + 1))
+                    print("th MoveBase_Action Complete!!")
+                    self.move_reach_goal = True
+                else:
+                    print("Action Failed")
+                    self.move_reach_goal = False
 
             return self.move_reach_goal
     
@@ -79,22 +88,22 @@ class DockingClient:
 class MissionClient :
     def __init__(self) :
 
-        self.move_base_result = MoveBaseClient()
-        self.se_move_base_result = MoveBaseClient()
-        # self.docking_result = DockingClient()
+        self.move_base_client = MoveBaseClient()
+        self.go_to_docking = DockingClient()
         
         self._is_reach_multi_goal = False
-
-        self.go_to_docking = DockingClient()
         
         # input robot's goal position x,y & orientation z,w in first_goal_list and second_goal_list
         self.move_base_list = []
-        self.first_goal_list  = [-5.540212631225586, -14.593623161315918, -0.9993664285511984, 0.03559131192893247]
-        self.second_goal_list = [0.9514656662940979, 0.016252458095550537 , 0.03029387883189036, 0.9995410351282826]
+        self.room_goal_list  = [-5.540212631225586, -14.593623161315918, -0.9993664285511984, 0.03559131192893247]
+        self.toilet_goal_list = [-1.7892355918884277, 8.190496444702148, 0.7011186191447972, 0.7130446563073681]
+        self.lab_goal_list = [1.3657242059707642, 0.003745555877685547 , -0.002370253081383217,0.9999971909462197 ]
 
-        self.move_base_list.append(self.first_goal_list)
-        self.move_base_list.append(self.second_goal_list)
+        self.move_base_list.append(self.room_goal_list)
+        # self.move_base_list.append(self.toilet_goal_list)
+        self.move_base_list.append(self.lab_goal_list)
         # print(len(self.move_base_list))
+        print(self.move_base_list[1])
 
     def xyzw_to_mbgoal(self, xyzw):
         self.mbgoal = MoveBaseGoal()
@@ -115,52 +124,42 @@ class MissionClient :
 
     def run_mission(self):
 
-        self.move_base_result.move_to_goal(self.xyzw_to_mbgoal(self.move_base_list[0]))
-        self.move_base_result.move_reach_goal = False
-        print("====" * 3 + " 1th move_base action complete " + "====" *3)
-
-        self.go_to_docking.move_to_safe()
-        self.go_to_docking.docking_reach_goal = False
-        print("====" * 3 + " 1th docking action complete " + "====" *3)
-        print("")
+        if self.move_base_client.move_to_goal(self.xyzw_to_mbgoal(self.move_base_list[0])):
         
-        self.move_base_result.move_to_goal(self.xyzw_to_mbgoal(self.move_base_list[1])) 
-        self.move_base_result.move_reach_goal = False
-        print("====" * 3 + " 2th move_base action complete " + "====" *3)
+            self.go_to_docking.move_to_safe()
+            self.go_to_docking.docking_reach_goal = False
+            print("====" * 3 + " 1th docking action complete " + "====" *3)
+            print("")
 
-        self.go_to_docking.move_to_safe()
-        self.go_to_docking.docking_reach_goal = False
-        print("====" * 3 + " 2th docking action complete " + "====" *3)
-        print("")
+        self.move_base_client.move_reach_goal = False
 
-        self.move_base_result.move_to_goal(self.xyzw_to_mbgoal(self.move_base_list[0]))
-        self.move_base_result.move_reach_goal = False
-        print("====" * 3 + " 3th move_base action complete " + "====" *3)
-
-        self.go_to_docking.move_to_safe()
-        self.go_to_docking.docking_reach_goal = False
-        print("====" * 3 + " 3th docking action complete " + "====" *3)
-        print("")
-
-        self.move_base_result.move_to_goal(self.xyzw_to_mbgoal(self.move_base_list[1])) 
-        self.move_base_result.move_reach_goal = False
-        print("====" * 3 + " 4th move_base action complete " + "====" *3)
-
-        self.go_to_docking.move_to_safe()
-        self.go_to_docking.docking_reach_goal = False
-        print("====" * 3 + " 4th docking action complete " + "====" *3)
-        print("")
-
-        self.move_base_result.move_to_goal(self.xyzw_to_mbgoal(self.move_base_list[0]))
-        self.move_base_result.move_reach_goal = False
-        print("====" * 3 + " 5th move_base action complete " + "====" *3)
-
-        self.go_to_docking.move_to_safe()
-        print("====" * 3 + " 5th docking action complete " + "====" *3)
-        print("")
+        if self.move_base_client.move_to_goal(self.xyzw_to_mbgoal(self.move_base_list[1])):
         
-        print("====" * 3 + " All Actions Finished!! " + "====" * 3)      
+            self.go_to_docking.move_to_safe()
+            self.go_to_docking.docking_reach_goal = False
+            print("====" * 3 + " 1th docking action complete " + "====" *3)
+            print("")
+        
+        self.move_base_client.move_reach_goal = False
 
+        if self.move_base_client.move_to_goal(self.xyzw_to_mbgoal(self.move_base_list[0])):
+        
+            self.go_to_docking.move_to_safe()
+            self.go_to_docking.docking_reach_goal = False
+            print("====" * 3 + " 1th docking action complete " + "====" *3)
+            print("")
+        
+        self.move_base_client.move_reach_goal = False
+
+        if self.move_base_client.move_to_goal(self.xyzw_to_mbgoal(self.move_base_list[1])):
+        
+            self.go_to_docking.move_to_safe()
+            self.go_to_docking.docking_reach_goal = False
+            print("====" * 3 + " 1th docking action complete " + "====" *3)
+            print("")
+        
+        self.move_base_client.move_reach_goal = False
+        
 if __name__ == '__main__':
     try:
         rospy.init_node('Docking_server_client')
