@@ -124,41 +124,41 @@ class MissionClient :
 
     def run_mission(self):
 
-        if self.move_base_client.move_to_goal(self.xyzw_to_mbgoal(self.move_base_list[0])):
-        
-            self.go_to_docking.move_to_safe()
-            self.go_to_docking.docking_reach_goal = False
-            print("====" * 3 + " 1th docking action complete " + "====" *3)
-            print("")
-
-        self.move_base_client.move_reach_goal = False
-
-        if self.move_base_client.move_to_goal(self.xyzw_to_mbgoal(self.move_base_list[1])):
-        
-            self.go_to_docking.move_to_safe()
-            self.go_to_docking.docking_reach_goal = False
-            print("====" * 3 + " 1th docking action complete " + "====" *3)
-            print("")
-        
-        self.move_base_client.move_reach_goal = False
-
-        if self.move_base_client.move_to_goal(self.xyzw_to_mbgoal(self.move_base_list[0])):
-        
-            self.go_to_docking.move_to_safe()
-            self.go_to_docking.docking_reach_goal = False
-            print("====" * 3 + " 1th docking action complete " + "====" *3)
-            print("")
-        
-        self.move_base_client.move_reach_goal = False
+        # if self.move_base_client.move_to_goal(self.xyzw_to_mbgoal(self.move_base_list[0])):
+        # 
+            # self.go_to_docking.move_to_safe()
+            # self.go_to_docking.docking_reach_goal = False
+            # print("====" * 3 + " 1th docking action complete " + "====" *3)
+            # print("")
+# 
+        # self.move_base_client.move_reach_goal = False
 
         if self.move_base_client.move_to_goal(self.xyzw_to_mbgoal(self.move_base_list[1])):
-        
+       
             self.go_to_docking.move_to_safe()
             self.go_to_docking.docking_reach_goal = False
             print("====" * 3 + " 1th docking action complete " + "====" *3)
             print("")
         
         self.move_base_client.move_reach_goal = False
+
+        # if self.move_base_client.move_to_goal(self.xyzw_to_mbgoal(self.move_base_list[0])):
+        
+        #     self.go_to_docking.move_to_safe()
+        #     self.go_to_docking.docking_reach_goal = False
+        #     print("====" * 3 + " 1th docking action complete " + "====" *3)
+        #     print("")
+        
+        # self.move_base_client.move_reach_goal = False
+
+        # if self.move_base_client.move_to_goal(self.xyzw_to_mbgoal(self.move_base_list[1])):
+        
+        #     self.go_to_docking.move_to_safe()
+        #     self.go_to_docking.docking_reach_goal = False
+        #     print("====" * 3 + " 1th docking action complete " + "====" *3)
+        #     print("")
+        
+        # self.move_base_client.move_reach_goal = False
         
 if __name__ == '__main__':
     try:

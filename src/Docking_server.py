@@ -35,7 +35,7 @@ class DockingMoveTo:
         
         rho = np.hypot(x_diff, y_diff)
         # print(rho)
-        if rho > 0.15:
+        if rho > 0.03:
             
             x_diff = x_goal - x
             y_diff = y_goal - y

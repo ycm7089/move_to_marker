@@ -33,9 +33,9 @@ class CameraImage():
         
         self.rgb_image = self.cv_br.imgmsg_to_cv2(msg, desired_encoding= "bgr8")
         self.findArucoMarkers(self.rgb_image)
-        cv2.namedWindow('test')
-        cv2.imshow('test', self.rgb_image)
-        cv2.waitKey(1)
+        # cv2.namedWindow('test')
+        # cv2.imshow('test', self.rgb_image)
+        # cv2.waitKey(1)
 
     def findArucoMarkers(self, img, draw=True):
 
@@ -54,11 +54,14 @@ class CameraImage():
                 # 0.1 : Aruco-Marker size, k : camera K, d : camera D
                 # should check rvec
                 rvec, tvec, markerPoints = cv2.aruco.estimatePoseSingleMarkers(bboxs[i], 0.1, self.k, self.d)
-                
+                print(rvec)
+                print("====="*20)
+                print(tvec)
+                print("")
                 # remove [] in tvec, rvec 
                 re_tvec = tvec[0]
                 re_rvec = rvec[0]
-                print(re_tvec)
+                # print(re_tvec)
                 # Draw a square around the markers
                 cv2.aruco.drawDetectedMarkers(img, bboxs) 
 
@@ -95,8 +98,8 @@ class CameraImage():
         # dst : 3x3 matrix, jacobian : 3x9 matrix 
         # https://www.programcreek.com/python/example/89450/cv2.Rodrigues
         dst, jacobian = cv2.Rodrigues(rvec)
-        print(dst)
-        print("====="*20)
+        # print(dst)
+        # print("====="*20)
         self.dst_1 = np.array(dst)
         self.tvec_1 = np.array(tvec)
         # print(self.dst_1.shape)
@@ -107,7 +110,7 @@ class CameraImage():
         self.pose_mat = np.concatenate((self.dst_1, np.transpose(self.tvec_1,(1,0))),1)    
 
         # self.pose_mat = cv2.hconcat((self.dst_1,self.tvec_1)) 
-        print(self.pose_mat)
+        # print(self.pose_mat)
         _, _, _, _, _, _, euler_angles = cv2.decomposeProjectionMatrix(self.pose_mat)
         # http://amroamroamro.github.io/mexopencv/matlab/cv.decomposeProjectionMatrix.html
         # print("Roll %.3f Pitch %.3f Yaw %.3f" %(euler_angles[0], euler_angles[1], euler_angles[2]))
